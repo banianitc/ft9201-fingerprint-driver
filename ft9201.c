@@ -916,10 +916,13 @@ static int ft9201_probe(struct usb_interface *intf, const struct usb_device_id *
 		goto error;
 	}
 
-	dev_info(&intf->dev, "Dev is at: %p", &intf->dev);
-
 	/* let the user know what node this device is now attached to */
 	dev_info(&intf->dev, "USB fpreader device now attached to fpreader%d", intf->minor);
+
+	retval = ft9201_initialize(dev);
+	if (retval < 0) {
+		dev_err(&dev->udev->dev, "Error initializing device: %d", retval);
+	}
 
 	return 0;
 
