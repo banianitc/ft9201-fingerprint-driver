@@ -177,11 +177,11 @@ static int ft9201_get_sensor_int_port_states(struct ft9201_device *dev, unsigned
 			GFP_KERNEL);
 
 	if (retval) {
-		dev_info(&dev->udev->dev, "Error sending data: %d\n", retval);
+		dev_info(&dev->interface->dev, "Error sending data: %d\n", retval);
 		return retval;
 	}
 
-	dev_info(&dev->udev->dev, "Read states: 0x%02x", local_states);
+	dev_info(&dev->interface->dev, "Read states: 0x%02x", local_states);
 	*states = local_states;
 
 	return retval;
@@ -262,11 +262,11 @@ static int ft9201_get_sui_version(struct ft9201_device *dev, unsigned short* ver
 			GFP_KERNEL);
 
 	if (retval) {
-		dev_info(&dev->udev->dev, "Error sending data: %d\n", retval);
+		dev_info(&dev->interface->dev, "Error sending data: %d\n", retval);
 		return retval;
 	}
-	dev_info(&dev->udev->dev, "Sent something");
-	dev_info(&dev->udev->dev, "sui version: %d", sui_version[0]);
+	dev_info(&dev->interface->dev, "Sent something");
+	dev_info(&dev->interface->dev, "sui version: %d", sui_version[0]);
 	*version = sui_version[0];
 
 	return retval;
@@ -290,10 +290,10 @@ static int ft9201_get_afe_state(struct ft9201_device *dev, unsigned short index,
 			GFP_KERNEL);
 
 	if (retval) {
-		dev_info(&dev->udev->dev, "Error sending data: %d\n", retval);
+		dev_info(&dev->interface->dev, "Error sending data: %d\n", retval);
 		return retval;
 	}
-	dev_info(&dev->udev->dev, "Read AFE at index 0x%02x: 0x%02x%02x%02x%02x", index, local_value[0], local_value[1], local_value[2], local_value[3] );
+	dev_info(&dev->interface->dev, "Read AFE at index 0x%02x: 0x%02x%02x%02x%02x", index, local_value[0], local_value[1], local_value[2], local_value[3] );
 	if (value == NULL) {
 		return -EFAULT;
 	}
@@ -329,7 +329,7 @@ static int ft9201_get_sensor_mcu_states(struct ft9201_device *dev, unsigned char
 			GFP_KERNEL);
 
 	if (retval) {
-		dev_info(&dev->udev->dev, "Error sending data: %d\n", retval);
+		dev_info(&dev->interface->dev, "Error sending data: %d\n", retval);
 		return retval;
 	}
 
@@ -358,7 +358,7 @@ static int ft9201_set_afe_state(struct ft9201_device *dev, unsigned short index,
 			GFP_KERNEL);
 
 	if (retval) {
-		dev_info(&dev->udev->dev, "Error sending data: %d\n", retval);
+		dev_info(&dev->interface->dev, "Error sending data: %d\n", retval);
 		return retval;
 	}
 
@@ -381,7 +381,7 @@ static int ft9201_probably_start_capture(struct ft9201_device *dev, unsigned sho
 			GFP_KERNEL);
 
 	if (retval) {
-		dev_info(&dev->udev->dev, "Error sending data: %d\n", retval);
+		dev_info(&dev->interface->dev, "Error sending data: %d\n", retval);
 		return retval;
 	}
 
@@ -404,7 +404,7 @@ static int ft9201_probably_configure_bulk_transfer(struct ft9201_device *dev, un
 			GFP_KERNEL);
 
 	if (retval) {
-		dev_info(&dev->udev->dev, "Error sending data: %d\n", retval);
+		dev_info(&dev->interface->dev, "Error sending data: %d\n", retval);
 		return retval;
 	}
 
@@ -435,13 +435,13 @@ static int ft9201_init_auto_power(struct ft9201_device *dev)
 
 	errCode = ft9201_set_afe_state(dev, 0x1f, 1);
 	if (errCode < 0) {
-		dev_err(&dev->udev->dev, "Error setting power something 1 to 0x1f: Error %d", errCode);
+		dev_err(&dev->interface->dev, "Error setting power something 1 to 0x1f: Error %d", errCode);
 		return errCode;
 	}
 
 	errCode = ft9201_set_afe_state(dev, 0x1e, 1);
 	if (errCode < 0) {
-		dev_err(&dev->udev->dev, "Error setting power something 1 to 0x1e: Error %d", errCode);
+		dev_err(&dev->interface->dev, "Error setting power something 1 to 0x1e: Error %d", errCode);
 		return errCode;
 	}
 
@@ -466,16 +466,12 @@ static int ft9201_init_auto_power(struct ft9201_device *dev)
 	if (errCode) {
 		return errCode;
 	}
-	pr_info("Intermediate sensor_mcu_state: %x", sensor_mcu_state);
 	sensor_mcu_state = 0;
 	errCode = ft9201_get_sensor_mcu_states(dev,&sensor_mcu_state);
 	if (errCode < 0) {
 		return errCode;
 	}
 	// supposedly we're good now
-	pr_info("Intermediate sensor_mcu_state1: %x", sensor_mcu_state);
-
-
 
 	return errCode;
 }
@@ -540,12 +536,12 @@ static int ft9201_initialize(struct ft9201_device *dev)
 	unsigned char afe_state_0x3c_agc_version;
 	char *chip_variant_str;
 
-	dev_info(&dev->udev->dev, "ioctl initialize");
+	dev_info(&dev->interface->dev, "ioctl initialize");
 
 	// errCode = ft9201_prepare_for_mcu_status_check(dev);
 	errCode = ft9201_get_sensor_mcu_states(dev, &sensor_status);
 	if (errCode) {
-		dev_err(&dev->udev->dev, "Error getting sensor status");
+		dev_err(&dev->interface->dev, "Error getting sensor status");
 		return errCode;
 	}
 
@@ -557,7 +553,7 @@ static int ft9201_initialize(struct ft9201_device *dev)
 	ft9201_get_afe_state(dev, 0x17, &chip_id_lower);
 
 	chip_id = ((chip_id_high & 0xff) << 8) | (chip_id_lower & 0xff);
-	dev_info(&dev->udev->dev, "afe sum: %04x\n", chip_id);
+	dev_info(&dev->interface->dev, "afe sum: %04x\n", chip_id);
 
 
 	switch (chip_id) {
@@ -570,11 +566,11 @@ static int ft9201_initialize(struct ft9201_device *dev)
 		case 0x95a8: // -0x6a58
 			errCode = ft9201_read_sensor_dimensions(dev);
 			if (errCode) {
-				dev_err(&dev->udev->dev, "Error reading sensor dimensions: %d", errCode);
+				dev_err(&dev->interface->dev, "Error reading sensor dimensions: %d", errCode);
 				return errCode;
 			}
 
-			dev_info(&dev->udev->dev, "Image dimensions: %d x %d", dev->device_status.sensor_width, dev->device_status.sensor_height);
+			dev_info(&dev->interface->dev, "Image dimensions: %d x %d", dev->device_status.sensor_width, dev->device_status.sensor_height);
 
 			if (dev->device_status.sensor_height != 0x60 || dev->device_status.sensor_width != 0x60) {
 				dev->device_status.chip_variant = 3;
@@ -600,7 +596,7 @@ static int ft9201_initialize(struct ft9201_device *dev)
 			chip_variant_str = "UNKNOWN";
 	}
 
-	dev_info(&dev->udev->dev, "Chip ID = 0x%x, FT93xx = %s (%d)", chip_id, chip_variant_str, dev->device_status.chip_variant);
+	dev_info(&dev->interface->dev, "Chip ID = 0x%x, FT93xx = %s (%d)", chip_id, chip_variant_str, dev->device_status.chip_variant);
 
 	// Here goes firmware download
 
@@ -620,7 +616,7 @@ static int ft9201_initialize(struct ft9201_device *dev)
 
 		ft9201_get_afe_state(dev, 0x3c, &afe_state_0x3c_agc_version);
 
-		dev_info(&dev->udev->dev, "fw version = %d agc version = %d", afe_state_0x1a_fw_version, afe_state_0x3c_agc_version);
+		dev_info(&dev->interface->dev, "fw version = %d agc version = %d", afe_state_0x1a_fw_version, afe_state_0x3c_agc_version);
 
 
 		// Some logic for checking whether firmware is latest
@@ -628,7 +624,7 @@ static int ft9201_initialize(struct ft9201_device *dev)
 
 		errCode = ft9201_read_sensor_dimensions(dev);
 		if (errCode) {
-			dev_err(&dev->udev->dev, "Error reading sensor dimensions: %d", errCode);
+			dev_err(&dev->interface->dev, "Error reading sensor dimensions: %d", errCode);
 			return errCode;
 		}
 
@@ -658,7 +654,7 @@ static int ft9201_read_image(struct ft9201_device *dev)
 	int read_length;
 	unsigned char *img_with_header;
 
-	dev_info(&dev->udev->dev, "Reading image from scanner; dimensions: %dx%d", dev->device_status.sensor_width, dev->device_status.sensor_height);
+	dev_info(&dev->interface->dev, "Reading image from scanner; dimensions: %dx%d", dev->device_status.sensor_width, dev->device_status.sensor_height);
 
 	dev->img_in_copied = 0;
 	dev->img_in_filled = 0;
@@ -689,12 +685,12 @@ static int ft9201_read_image(struct ft9201_device *dev)
 			USB_READ_OP_TIMEOUT
 	);
 	if (retVal < 0) {
-		dev_err(&dev->udev->dev, "Error reading data from device: Error %d", retVal);
+		dev_err(&dev->interface->dev, "Error reading data from device: Error %d", retVal);
 		goto out;
 	}
-	dev_info(&dev->udev->dev, "Received %d bytes from device", read_length);
+	dev_info(&dev->interface->dev, "Received %d bytes from device", read_length);
 	if (read_length != transfer_size) {
-		dev_err(&dev->udev->dev, "Read less than image size");
+		dev_err(&dev->interface->dev, "Read less than image size");
 		retVal = -EINVAL;
 		goto out;
 	}
@@ -768,7 +764,7 @@ static DECLARE_WAIT_QUEUE_HEAD(ft9201_wq);
 
 static int has_data_remaining(struct ft9201_device *dev)
 {
-	dev_info(&dev->udev->dev, "Copied: %lu, Filled: %lu", dev->img_in_copied, dev->img_in_filled);
+	dev_info(&dev->interface->dev, "Copied: %lu, Filled: %lu", dev->img_in_copied, dev->img_in_filled);
 	return dev->img_in_copied < dev->img_in_filled;
 }
 
@@ -779,7 +775,7 @@ static ssize_t send_read_data(struct ft9201_device *dev, char __user *buf, size_
 	if (to_copy > count) {
 		to_copy = count;
 	}
-	dev_info(&dev->udev->dev, "Copied: %lu, to_copy: %lu, full_size: %lu", dev->img_in_copied, to_copy, dev->img_in_size);
+	dev_info(&dev->interface->dev, "Copied: %lu, to_copy: %lu, full_size: %lu", dev->img_in_copied, to_copy, dev->img_in_size);
 
 	if (dev->img_in_copied + to_copy > dev->img_in_size) {
 		return -EINVAL;
@@ -789,7 +785,7 @@ static ssize_t send_read_data(struct ft9201_device *dev, char __user *buf, size_
 		return -EFAULT;
 	}
 	dev->img_in_copied += to_copy;
-	dev_info(&dev->udev->dev, "Copied total: %lu", dev->img_in_copied);
+	dev_info(&dev->interface->dev, "Copied total: %lu", dev->img_in_copied);
 	return (ssize_t)to_copy;
 }
 
@@ -802,7 +798,6 @@ static ssize_t ft9201_read(struct file *fp, char __user *buf, size_t count, loff
 	unsigned char data_ready;
 	unsigned char translate_data;
 	unsigned char afe_0x1d_finger_present;
-	int loop_count;
 
 	if (dev == NULL) {
 		pr_err("device is null\n");
@@ -842,42 +837,42 @@ static ssize_t ft9201_read(struct file *fp, char __user *buf, size_t count, loff
 			continue;
 		}
 
-		dev_info(&dev->udev->dev, "Data ready: 0x%02x", data_ready);
+		dev_info(&dev->interface->dev, "Data ready: 0x%02x", data_ready);
 		if (data_ready) {
 			ret = ft9201_get_afe_state(dev, 0x30, &translate_data);
 			if (ret) {
 				break;
 			}
-			dev_info(&dev->udev->dev, "0x30 translate data: 0x%02x", translate_data);
+			dev_info(&dev->interface->dev, "0x30 translate data: 0x%02x", translate_data);
 
 			if (translate_data == FT9201_AFE_0X30_SUCCESSFUL_RESPONSE) {
 				ret = ft9201_get_afe_state(dev, 0x1d, &afe_0x1d_finger_present);
 				if (ret) {
 					break;
 				}
-				dev_info(&dev->udev->dev, "afe 0x1d data: 0x%02x", afe_0x1d_finger_present);
+				dev_info(&dev->interface->dev, "afe 0x1d data: 0x%02x", afe_0x1d_finger_present);
 
 				if (afe_0x1d_finger_present != 1 && afe_0x1d_finger_present != 0xa0) {
 					// finger was not detected, retry something
 					// maybe we need to return to auto power settings or something similar
 				} else {
-					dev_info(&dev->udev->dev, "finger detected: 0x%02x", afe_0x1d_finger_present);
+					dev_info(&dev->interface->dev, "finger detected: 0x%02x", afe_0x1d_finger_present);
 					ret = ft9201_probably_start_capture(dev, 0xff);
 					if (ret) {
-						dev_err(&dev->udev->dev, "error capturing1: %d", ret);
+						dev_err(&dev->interface->dev, "error capturing1: %d", ret);
 						break;
 					}
 					msleep(20);
 
 					ret = ft9201_probably_start_capture(dev, 0x3);
 					if (ret) {
-						dev_err(&dev->udev->dev, "error capturing2: %d", ret);
+						dev_err(&dev->interface->dev, "error capturing2: %d", ret);
 						break;
 					}
 
 					ret = ft9201_probably_configure_bulk_transfer(dev, 0x3400, dev->device_status.sensor_width * dev->device_status.sensor_height + 2);
 					if (ret) {
-						dev_err(&dev->udev->dev, "error configuring bulk transfer: %d", ret);
+						dev_err(&dev->interface->dev, "error configuring bulk transfer: %d", ret);
 						break;
 					}
 
