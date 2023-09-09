@@ -4,11 +4,12 @@
 
 #include "./ft9201.h"
 
+MODULE_AUTHOR("Mak Krnic <mak@banianitc.com>");
+MODULE_LICENSE("GPL v2");
+MODULE_DESCRIPTION("FT9201 Fingeprint reader driver");
+
 #define VENDOR_ID 0x2808
 #define PRODUCT_ID 0x93a9
-
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("FT9201 Fingeprint reader driver");
 
 static struct usb_device_id ft9201_table[] = {
 		{USB_DEVICE(VENDOR_ID, PRODUCT_ID)},
@@ -16,7 +17,7 @@ static struct usb_device_id ft9201_table[] = {
 };
 MODULE_DEVICE_TABLE(usb, ft9201_table);
 
-#define USB_SKEL_MINOR_BASE	192
+#define FT9201_MINOR_BASE	192
 
 #define WRITES_IN_FLIGHT	8
 
@@ -56,7 +57,7 @@ static int ft9201_prepare_for_mcu_status_check(struct ft9201_device *dev);
 static int ft9201_initialize(struct ft9201_device *dev);
 static long ft9201_ioctl_get_status(struct ft9201_device *dev, struct ft9201_status *device_status);
 static int ft9201_get_sui_version(struct ft9201_device *dev, unsigned short* version);
-static int ft9201_get_afe_state(struct ft9201_device *dev, unsigned short index, unsigned char* version);
+static int ft9201_get_afe_state(struct ft9201_device *dev, unsigned short index, unsigned char* value);
 static int ft9201_get_sensor_mcu_states(struct ft9201_device *dev, unsigned char *states);
 static int ft9201_ic_sensor_mode_exit(struct ft9201_device *dev);
 static int ft9201_init_auto_power(struct ft9201_device *dev);
@@ -65,6 +66,7 @@ static int ft9201_set_afe_state(struct ft9201_device *dev, unsigned short index,
 
 static int ft9201_read_sensor_dimensions(struct ft9201_device * dev);
 static int ft9201_read_image(struct ft9201_device *dev);
+static int ft9201_load_afe_chip_id(struct ft9201_device *dev);
 
 static void ft9201_delete(struct kref *kref);
 
@@ -86,7 +88,7 @@ static const struct file_operations ft9201_fops = {
 static struct usb_class_driver ft9201_class = {
 		.name =	        "fpreader%d",
 		.fops =	        &ft9201_fops,
-		.minor_base =   USB_SKEL_MINOR_BASE,
+		.minor_base =   FT9201_MINOR_BASE,
 };
 
 // IN Requests
@@ -525,15 +527,31 @@ static int ft9201_read_sensor_dimensions(struct ft9201_device * dev)
 	return ft9201_get_afe_state(dev, 0x15, &dev->device_status.sensor_height);
 }
 
+static int ft9201_load_afe_chip_id(struct ft9201_device *dev)
+{
+	int ret;
+	unsigned char chip_id_high;
+	unsigned char chip_id_low;
+
+	ret = ft9201_get_afe_state(dev, 0x16, &chip_id_high);
+	if (ret < 0) {
+		return ret;
+	}
+	ret = ft9201_get_afe_state(dev, 0x17, &chip_id_low);
+	if (ret < 0) {
+		return ret;
+	}
+
+	dev->device_status.afe_chip_id = ((chip_id_high & 0xff) << 8) | (chip_id_low & 0xff);
+	dev_info(&dev->interface->dev, "afe sum: %04x\n", dev->device_status.afe_chip_id);
+
+	return ret;
+}
+
 static int ft9201_initialize(struct ft9201_device *dev)
 {
 	int errCode;
-	unsigned char chip_id_high;
-	unsigned char chip_id_lower;
-	unsigned short chip_id;
 	unsigned char sensor_status;
-	unsigned char afe_state_0x1a_fw_version;
-	unsigned char afe_state_0x3c_agc_version;
 	char *chip_variant_str;
 
 	dev_info(&dev->interface->dev, "ioctl initialize");
@@ -549,14 +567,9 @@ static int ft9201_initialize(struct ft9201_device *dev)
 		ft9201_ic_sensor_mode_exit(dev);
 	}
 
-	ft9201_get_afe_state(dev, 0x16, &chip_id_high);
-	ft9201_get_afe_state(dev, 0x17, &chip_id_lower);
+	ft9201_load_afe_chip_id(dev);
 
-	chip_id = ((chip_id_high & 0xff) << 8) | (chip_id_lower & 0xff);
-	dev_info(&dev->interface->dev, "afe sum: %04x\n", chip_id);
-
-
-	switch (chip_id) {
+	switch (dev->device_status.afe_chip_id) {
 		case 0x9338: // -0x6cc8
 			// some more AFE reading
 			break;
@@ -596,7 +609,7 @@ static int ft9201_initialize(struct ft9201_device *dev)
 			chip_variant_str = "UNKNOWN";
 	}
 
-	dev_info(&dev->interface->dev, "Chip ID = 0x%x, FT93xx = %s (%d)", chip_id, chip_variant_str, dev->device_status.chip_variant);
+	dev_info(&dev->interface->dev, "AFE Chip ID = 0x%x, FT93xx = %s (%d)", dev->device_status.afe_chip_id, chip_variant_str, dev->device_status.chip_variant);
 
 	// Here goes firmware download
 
@@ -611,13 +624,12 @@ static int ft9201_initialize(struct ft9201_device *dev)
 		//
 
 
-		ft9201_get_afe_state(dev, 0x1a, &afe_state_0x1a_fw_version);
+		ft9201_get_afe_state(dev, 0x1a, &dev->device_status.fw_version);
 		// then ignore this
 
-		ft9201_get_afe_state(dev, 0x3c, &afe_state_0x3c_agc_version);
+		ft9201_get_afe_state(dev, 0x3c, &dev->device_status.agc_version);
 
-		dev_info(&dev->interface->dev, "fw version = %d agc version = %d", afe_state_0x1a_fw_version, afe_state_0x3c_agc_version);
-
+		dev_info(&dev->interface->dev, "fw version = %d agc version = %d", dev->device_status.fw_version, dev->device_status.agc_version);
 
 		// Some logic for checking whether firmware is latest
 		// and goto to actual fw upload code if needed

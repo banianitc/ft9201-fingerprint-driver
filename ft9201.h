@@ -16,8 +16,10 @@ struct ft9201_status {
 	int chip_variant;
 	unsigned char sensor_width;
 	unsigned char sensor_height;
-	unsigned char chip_id_upper;
-	unsigned char chip_id_lower;
+	unsigned short afe_chip_id;
+	unsigned char fw_version;
+	unsigned char agc_version;
+
 
 	unsigned char *raw_image_dta;
 };
