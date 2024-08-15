@@ -13,7 +13,7 @@ If driver is installed, it will autoload when appropriate device is connected.
 Once the driver is loaded, and a device is present, it will be available at `/dev/fpreader0`.
 
 1. Initialize the driver with `./ft9201_util /dev/fpreader0`
-2. Capture a fingerprint: `cat /dev/fpreader0 > fingeprint.rawimg`
+2. Capture a fingerprint: `cat /dev/fpreader0 > fingerprint.rawimg`
 3. Convert raw image data into png with imagemagick: `convert -size 64x80 -depth 8 gray:./fingerprint.rawimg fingerprint.png`
 
 # Installation
