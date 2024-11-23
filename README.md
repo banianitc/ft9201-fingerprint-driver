@@ -16,6 +16,15 @@ Once the driver is loaded, and a device is present, it will be available at `/de
 2. Capture a fingerprint: `cat /dev/fpreader0 > fingerprint.rawimg`
 3. Convert raw image data into png with imagemagick: `convert -size 64x80 -depth 8 gray:./fingerprint.rawimg fingerprint.png`
 
+> [!TIP]
+> If you get the following error message in step 3, you are using a different sensor size for your product.
+> > convert-im6.q16: unexpected end-of-file `./fingerprint.rawimg': No such file or directory @ error/gray.c/ReadGRAYImage/247.
+>
+> Check the log for the sensor size and specify that value (e.g. 96x96) in the command.
+> ```
+> dmesg | grep 'from scanner; dimensions:'
+> ```
+
 # Installation
 
 ## Driver
