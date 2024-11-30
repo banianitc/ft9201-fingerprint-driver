@@ -48,7 +48,7 @@ Once the driver is loaded, and a device is present, it will be available at `/de
   
 1. Get into the project directory: `cd ft9201-fingerprint-driver/`
 2. Check and verify module name: `sudo ls -lah /dev/fpreader*`
-3. Let's day if module name is **fpreader4**, initialize the driver with: `sudo ./ft9201_util /dev/fpreader4`
+3. Let's say if module name is **fpreader4**, initialize the driver with: `sudo ./ft9201_util /dev/fpreader4`
    
    **Sample output:**
    ```shell
